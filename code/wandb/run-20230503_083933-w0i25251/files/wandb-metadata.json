@@ -1,0 +1,48 @@
+{
+    "os": "Windows-10-10.0.19041-SP0",
+    "python": "3.9.0",
+    "heartbeatAt": "2023-05-03T15:39:33.801570",
+    "startedAt": "2023-05-03T15:39:33.294057",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "E:\\FedCMA-ktboi\\code\\main_full.py",
+    "codePath": "main_full.py",
+    "host": "DESKTOP-S77317R",
+    "username": "kalyan",
+    "executable": "C:\\Users\\kalyan\\anaconda3\\envs\\fedlr1\\python.exe",
+    "cpu_count": 6,
+    "cpu_count_logical": 6,
+    "cpu_freq": {
+        "current": 3696.0,
+        "min": 0.0,
+        "max": 3696.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3696.0,
+            "min": 0.0,
+            "max": 3696.0
+        }
+    ],
+    "disk": {
+        "total": 488.28026962280273,
+        "used": 0.2589759826660156
+    },
+    "gpu": "NVIDIA GeForce RTX 2070 SUPER",
+    "gpu_count": 2,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 2070 SUPER",
+            "memory_total": 8589934592
+        },
+        {
+            "name": "NVIDIA GeForce RTX 2070 SUPER",
+            "memory_total": 8589934592
+        }
+    ],
+    "memory": {
+        "total": 15.841777801513672
+    }
+}

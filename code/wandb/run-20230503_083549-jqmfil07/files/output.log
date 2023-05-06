@@ -1,0 +1,21 @@
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+> e:\fedcma-ktboi\code\main_full.py(289)<module>()
+-> raise NotImplementedError
+*** SyntaxError: Missing parentheses in call to 'print'. Did you mean print(args.net)?
+'lenet'
+False
+Traceback (most recent call last):
+  File "E:\FedCMA-ktboi\code\main_full.py", line 289, in <module>
+    raise NotImplementedError
+  File "E:\FedCMA-ktboi\code\main_full.py", line 289, in <module>
+    raise NotImplementedError
+  File "C:\Users\kalyan\anaconda3\envs\fedlr1\lib\bdb.py", line 88, in trace_dispatch
+    return self.dispatch_line(frame)
+  File "C:\Users\kalyan\anaconda3\envs\fedlr1\lib\bdb.py", line 113, in dispatch_line
+    if self.quitting: raise BdbQuit
+bdb.BdbQuit

@@ -1,0 +1,24 @@
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Traceback (most recent call last):
+  File "E:\FedCMA-ktboi\code\main_full.py", line 266, in <module>
+    loaded_dataset, num_classes = initialize_dataset()
+  File "E:\FedCMA-ktboi\code\main_full.py", line 171, in initialize_dataset
+    return_val, num_classes = load_CIFAR_data()
+  File "E:\FedCMA-ktboi\code\main_full.py", line 99, in load_CIFAR_data
+    train_dataset_gray, validation_dataset_gray, test_dataset_gray = get_datasets(transform_train_gray, transform_test_gray, args.data_path)
+  File "E:\FedCMA-ktboi\code\data_utils.py", line 38, in get_datasets
+    train_dataset = datasets.CIFAR10(
+  File "C:\Users\kalyan\anaconda3\envs\fedlr1\lib\site-packages\torchvision\datasets\cifar.py", line 67, in __init__
+    if not self._check_integrity():
+  File "C:\Users\kalyan\anaconda3\envs\fedlr1\lib\site-packages\torchvision\datasets\cifar.py", line 131, in _check_integrity
+    if not check_integrity(fpath, md5):
+  File "C:\Users\kalyan\anaconda3\envs\fedlr1\lib\site-packages\torchvision\datasets\utils.py", line 74, in check_integrity
+    return check_md5(fpath, md5)
+  File "C:\Users\kalyan\anaconda3\envs\fedlr1\lib\site-packages\torchvision\datasets\utils.py", line 66, in check_md5
+    return md5 == calculate_md5(fpath, **kwargs)
+  File "C:\Users\kalyan\anaconda3\envs\fedlr1\lib\site-packages\torchvision\datasets\utils.py", line 61, in calculate_md5
+    md5.update(chunk)
+KeyboardInterrupt

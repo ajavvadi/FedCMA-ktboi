@@ -1,0 +1,16 @@
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Traceback (most recent call last):
+  File "E:\FedCMA-ktboi\code\main_full.py", line 257, in <module>
+    loaded_dataset, num_classes = initialize_dataset()
+  File "E:\FedCMA-ktboi\code\main_full.py", line 169, in initialize_dataset
+    return_val, num_classes = load_CIFAR_data()
+  File "E:\FedCMA-ktboi\code\main_full.py", line 110, in load_CIFAR_data
+    loaded_partitions = get_partitions(os.path.join('data/dirichlet-CIFAR10', data_file_name))
+  File "E:\FedCMA-ktboi\code\main_full.py", line 102, in get_partitions
+    with open(file, 'rb') as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'data/dirichlet-CIFAR10\\CIFAR10-dirichlet-2-0.1-0.p.p'

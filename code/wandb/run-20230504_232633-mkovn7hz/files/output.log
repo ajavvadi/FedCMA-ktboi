@@ -1,0 +1,11 @@
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+Files already downloaded and verified
+  0%|                                                                                           | 0/50 [00:47<?, ?it/s]
+Traceback (most recent call last):
+  File "E:\FedCMA-ktboi\code\main_full.py", line 596, in <module>
+    row_wandb['consensus_model_norm'] = cons_classifier_norm
+NameError: name 'cons_classifier_norm' is not defined

@@ -32,11 +32,14 @@ class WorkerLtd:
         self, 
         w_ind, 
         network, 
-        train_subset, 
-        validation_subset, 
-        logdir, 
+        train_subset=None, 
+        train_sampler=None,
+        validation_subset=None,
+        validation_sampler=None, 
+        logdir=None, 
         use_sigmoid='relu',    # last layer activation fnction
         test_subset=None, 
+        test_sampler=None,
         test_subset_full=None,
         discr_subset=None,
         num_classes=10,
@@ -147,21 +150,32 @@ class WorkerLtd:
 
         # load datasets and data loaders
         self.train_subset = train_subset
+        self.train_sampler = train_sampler
         self.validation_subset = validation_subset
+        self.validation_sampler = validation_sampler
         self.test_subset = test_subset
+        self.test_sampler = test_sampler
         if 'synth' in network:
-            self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, shuffle=True)
-            self.validation_loader = DataLoader(validation_subset, batch_size=512, shuffle=True)
-            self.test_loader = DataLoader(self.test_subset, batch_size=512, shuffle=False)
+            self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, sampler=self.train_sampler, drop_last=False)            
+            self.validation_loader = DataLoader(validation_subset, batch_size=512, sampler=self.validation_sampler, drop_last=False)            
+            self.test_loader = DataLoader(test_subset, batch_size=512, sampler=self.test_sampler, drop_last=False)
+            # self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, shuffle=True)
+            # self.validation_loader = DataLoader(validation_subset, batch_size=512, shuffle=True)
+            # self.test_loader = DataLoader(self.test_subset, batch_size=512, shuffle=False)
         else:
             # self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, shuffle=True, num_workers=8, pin_memory=True)
             # self.validation_loader = DataLoader(validation_subset, batch_size=512, shuffle=True, num_workers=8, pin_memory=True)
             if test_subset_full is not None:
                 self.test_subset_full = test_subset_full
                 self.test_loader_full = DataLoader(self.test_subset_full, batch_size=512, shuffle=False,num_workers=8, pin_memory=True)
-            self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, shuffle=True, pin_memory=True)
-            self.validation_loader = DataLoader(validation_subset, batch_size=512, shuffle=True, pin_memory=True)
-            self.test_loader = DataLoader(self.test_subset, batch_size=512, shuffle=False,num_workers=8, pin_memory=True)
+
+            self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, sampler=self.train_sampler, drop_last=False)            
+            self.validation_loader = DataLoader(validation_subset, batch_size=512, sampler=self.validation_sampler, drop_last=False)            
+            self.test_loader = DataLoader(test_subset, batch_size=512, sampler=self.test_sampler, drop_last=False)
+
+            # self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, shuffle=True, pin_memory=True)
+            # self.validation_loader = DataLoader(validation_subset, batch_size=512, shuffle=True, pin_memory=True)
+            # self.test_loader = DataLoader(self.test_subset, batch_size=512, shuffle=False,num_workers=8, pin_memory=True)
 
         self.discr_subset = discr_subset
         if discr_subset is None:

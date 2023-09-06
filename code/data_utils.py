@@ -4,6 +4,31 @@ import torch
 from torchvision import transforms
 from torchvision import datasets
 
+
+class IndexSampler(object):
+    def __init__(self, indices, shuffle=True) -> None:
+        # super().__init__()
+        self.g=torch.Generator()
+        self.g.manual_seed(0)
+        self.indices = indices
+        self.shuffle = shuffle
+        self.num_samples = len(self.indices)
+
+    def __iter__(self):
+        if self.shuffle:
+            indices = torch.randperm(len(self.indices), generator=self.g).tolist()
+        else:
+            indices = self.indices
+
+        return iter(indices)
+
+    def __len__(self):
+        return self.num_samples
+
+    def __str__(self) -> str:
+        return f'IndexSampler'
+    
+
 def get_transforms(grayscale=False):
 
     if not grayscale:

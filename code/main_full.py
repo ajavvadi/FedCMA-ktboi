@@ -15,7 +15,7 @@ import argparse
 import random
 from models import *
 from worker import WorkerLtd, compute_norm
-from data_utils import get_transforms, get_datasets, load_saved_embeddings
+from data_utils import get_transforms, get_datasets, load_saved_embeddings, IndexSampler
 from compute_divergence import train_discriminator, create_dataset_from_saved_embeddings, create_dataset_from_saved_embeddings_fedavg, SingleLayerNet
 
 import time
@@ -61,6 +61,8 @@ def experiment_name(args):
         name = f'{name}_synth'
     elif args.dirichlet:
         name=f'{name}_dirichlet-{args.alpha}'
+    elif args.iid:
+        name=f'{name}_dirichlet-'
     
     name=f'{name}_{args.use_sigmoid}_{args.num_epochs}'
 
@@ -108,8 +110,18 @@ def load_CIFAR_data():
 
         return partitions
 
-    data_file_name = f'CIFAR10-dirichlet-{args.num_workers}0-{args.alpha}-{args.data_seed}.p.p'
-    loaded_partitions = get_partitions(os.path.join('data/dirichlet-CIFAR10', data_file_name))
+    #data_file_name = f'CIFAR10-dirichlet-{args.num_workers}0-{args.alpha}-{args.data_seed}.p.p'
+    #loaded_partitions = get_partitions(os.path.join('data/dirichlet-CIFAR10', data_file_name))
+
+    if (args.iid):
+        #import pdb; pdb.set_trace()
+        data_file_name = f'CIFAR10-iid-partition-{args.num_workers}-{args.data_seed}.p'
+        loaded_partitions = get_partitions(os.path.join('data/dirichlet-CIFAR10', data_file_name))
+    elif (args.dirichlet):
+        data_file_name = f'CIFAR10-dirichlet-{args.num_workers}0-{args.alpha}-{args.data_seed}.p.p'
+        loaded_partitions = get_partitions(os.path.join('data/dirichlet-CIFAR10', data_file_name))
+    else:
+        raise NotImplementedError
 
     with open(os.path.join(args.logdir, 'partitions.p'), 'wb') as f:
         pickle.dump(loaded_partitions, f)
@@ -118,18 +130,26 @@ def load_CIFAR_data():
     validation_subsets = dict()
     test_subsets = dict()
 
+
+    # part -> worker ind
     for part in range(args.num_workers):
-        train_subsets[part] = Subset(train_dataset, loaded_partitions['train'][part])
-        validation_subsets[part] = Subset(validation_dataset, loaded_partitions['validation'][part])
-        test_subsets[part] = Subset(test_dataset, loaded_partitions['test'][part])
+        train_subsets[part] = IndexSampler(indices=loaded_partitions['train'][part], shuffle=True)
+        validation_subsets[part] = IndexSampler(indices=loaded_partitions['validation'][part], shuffle=True)
+        test_subsets[part] = IndexSampler(indices=loaded_partitions['test'][part], shuffle=True)
+        # train_subsets[part] = Subset(train_dataset, loaded_partitions['train'][part])
+        # validation_subsets[part] = Subset(validation_dataset, loaded_partitions['validation'][part])
+        # test_subsets[part] = Subset(test_dataset, loaded_partitions['test'][part])
 
     train_subsets_gray = dict()
     validation_subsets_gray = dict()
     test_subsets_gray = dict()
     for part in range(args.num_workers):
-        train_subsets_gray[part] = Subset(train_dataset_gray, loaded_partitions['train'][part])
-        validation_subsets_gray[part] = Subset(validation_dataset_gray, loaded_partitions['validation'][part])
-        test_subsets_gray[part] = Subset(test_dataset_gray, loaded_partitions['test'][part])
+        train_subsets_gray[part] = IndexSampler(indices=loaded_partitions['train'][part], shuffle=True)
+        validation_subsets_gray[part] = IndexSampler(indices=loaded_partitions['validation'][part], shuffle=True)
+        test_subsets_gray[part] = IndexSampler(indices=loaded_partitions['test'][part], shuffle=True)
+        # train_subsets_gray[part] = Subset(train_dataset_gray, loaded_partitions['train'][part])
+        # validation_subsets_gray[part] = Subset(validation_dataset_gray, loaded_partitions['validation'][part])
+        # test_subsets_gray[part] = Subset(test_dataset_gray, loaded_partitions['test'][part])
 
 
     weights=[]
@@ -191,8 +211,9 @@ if __name__=="__main__":
     parser.add_argument('--embedding_dim', default=84, type=int)
     parser.add_argument('--data_seed', default=0, type=int)
     parser.add_argument('--seed', default=0, type=int)
-    parser.add_argument('--num_workers', default=2, type=int)
-    parser.add_argument('--dirichlet', default=True, action='store_true')
+    parser.add_argument('--num_workers', default=10, type=int)
+    parser.add_argument('--dirichlet', default=False, action='store_true')
+    parser.add_argument('--iid', default=True, action='store_true')
     parser.add_argument('--alpha', default=0.1, type=float)
     parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
     parser.add_argument('--lr_scheduler', default='none', help='learning rate scheduler')
@@ -288,7 +309,7 @@ if __name__=="__main__":
             else:
                 raise NotImplementedError
         else:
-            if args.dirichlet:
+            if args.dirichlet or args.iid:
                 temp_train_set = loaded_dataset['train_subsets'][worker_ind]
                 temp_valid_set = loaded_dataset['validation_subsets'][worker_ind]
                 temp_test_set = loaded_dataset['test_subsets'][worker_ind]
@@ -298,14 +319,19 @@ if __name__=="__main__":
                 raise NotImplementedError
                 # temp_test_set = loaded_dataset['test_subset']
 
+        # _user_train_sampler = IndexSampler(indices=self.train_partitions[i], shuffle=True)
+        # _user_train_loader = DataLoader(self.train_dataset, batch_size=args.batch_size, sampler=_user_train_sampler, drop_last=False)            
         workers[worker_ind] = WorkerLtd(
             worker_ind, 
             args.net, 
-            temp_train_set, 
-            temp_valid_set, 
-            args.logdir, 
+            train_subset=loaded_dataset['train_dataset'], 
+            train_sampler=temp_train_set,
+            validation_subset=loaded_dataset['validation_dataset'], 
+            validation_sampler=temp_valid_set,
+            logdir=args.logdir, 
             use_sigmoid=args.use_sigmoid,
-            test_subset=temp_test_set,
+            test_subset=loaded_dataset['test_dataset'],
+            test_sampler=temp_test_set,
             transfer=args.transfer,
             num_moments=args.num_moments,
             weights=loaded_dataset['weights'],
@@ -565,8 +591,8 @@ if __name__=="__main__":
                 np.save(os.path.join(embeddings_dir, f'epoch-{epoch}.npy'), np.array(consensus_embeddings.cpu()))
 
         if (args.transfer != 'none') and args.share_last_layer: # how to share parameter weights
+            # import pdb; pdb.set_trace()
             with torch.no_grad():
-
                 for p1, p2 in zip(temp_consensus_classifier.parameters(), workers[0].model.classifier.parameters()):
                     if args.weighted_sharing:
                         p1.data = p2.detach().clone().data * (weights.sum(axis=1)[0]/weights.sum())
@@ -592,7 +618,8 @@ if __name__=="__main__":
                     for wid, worker in workers.items():
                         worker.store_global_classifier(consensus_classifier)
         
-        elif ((args.transfer != 'none') and (args.transfer == 'fedavg')):
+        elif (args.transfer == 'fedavg'):
+            # import pdb; pdb.set_trace()
             with torch.no_grad():
                 workers_processed = set()
                 if args.leftout_worker_id == 0:

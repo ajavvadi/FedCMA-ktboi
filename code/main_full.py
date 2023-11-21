@@ -93,6 +93,7 @@ def anneal_cons_alpha(args, epoch, l2=False,discr=1.0):
 
 
 def load_CIFAR_data():
+    print("KT: in load_CIFAR_data")
     from data_utils import get_datasets, get_transforms
 
     transform_train, transform_test = get_transforms(grayscale=False)
@@ -185,10 +186,96 @@ def load_CIFAR_data():
     }
     return return_val, 10
 
+def load_PACS_data(train_dataset_path,
+                   val_dataset_path,
+                   test_dataset_path,
+                   partition_path):
 
-def initialize_dataset():
+    from data_utils import get_datasets_pacs, get_transforms
+
+    transform_train, transform_test = get_transforms(grayscale=False)
+    train_dataset, validation_dataset, test_dataset = get_datasets_pacs(transform_train, transform_test, train_dataset_path, val_dataset_path, test_dataset_path)
+    # transform_train_gray, transform_test_gray = get_transforms(grayscale=True)
+    # train_dataset_gray, validation_dataset_gray, test_dataset_gray = get_datasets_pacs(transform_train_gray, transform_test_gray, train_dataset_path, val_dataset_path, test_dataset_path)
+
+    transform_train_gray, transform_test_gray = None, None
+    train_dataset_gray, validation_dataset_gray, test_dataset_gray = None, None, None
+
+    def get_partitions(file_):
+        file = os.path.join(file_)
+        try:
+            with open(file, 'rb') as f:
+                partitions = pickle.load(f)
+        except:
+            raise
+
+        return partitions
+    
+    loaded_partitions = get_partitions(partition_path)
+
+    with open(os.path.join(args.logdir, 'partitions.p'), 'wb') as f:
+        pickle.dump(loaded_partitions, f)
+
+    train_subsets = dict()
+    validation_subsets = dict()
+    test_subsets = dict()
+    # part -> worker ind
+    for part in range(args.num_workers):
+        train_subsets[part] = IndexSampler(indices=loaded_partitions['train'][part], shuffle=True)
+        validation_subsets[part] = IndexSampler(indices=loaded_partitions['validation'][part], shuffle=True)
+        test_subsets[part] = IndexSampler(indices=loaded_partitions['test'][part], shuffle=True)
+
+    train_subsets_gray = dict()
+    validation_subsets_gray = dict()
+    test_subsets_gray = dict()
+    '''
+    for part in range(args.num_workers):
+        train_subsets_gray[part] = IndexSampler(indices=loaded_partitions['train'][part], shuffle=True)
+        validation_subsets_gray[part] = IndexSampler(indices=loaded_partitions['validation'][part], shuffle=True)
+        test_subsets_gray[part] = IndexSampler(indices=loaded_partitions['test'][part], shuffle=True)
+    '''
+
+    weights=[]
+    for worker_ind in range(args.num_workers):
+        s=pd.Series(np.array(train_dataset.targets)[loaded_partitions['train'][worker_ind]]).value_counts()
+        weights.append([s[x] if x in s.keys() else 0 for x in range(10)])
+    weights = np.array(weights)
+    label_counts=weights.sum(axis=0)
+    weights=np.array([[weights[w,x]/label_counts[x] for x in range(10)] for w in range(args.num_workers)])
+
+    y_train = np.array(train_dataset.targets)
+    dirichlet_allocation = {}
+    for x in range(10):
+        dirichlet_allocation[x] = ','.join([str(sum(y_train[loaded_partitions['train'][wid]]==x)) for wid in range(args.num_workers)])
+
+    return_val = {
+        'train_dataset': train_dataset,
+        'validation_dataset': validation_dataset,
+        'test_dataset': test_dataset,
+        'train_subsets': train_subsets,
+        'validation_subsets': validation_subsets,
+        'test_subsets': test_subsets,
+        'train_dataset_gray': train_dataset_gray,
+        'validation_dataset_gray': validation_dataset_gray,
+        'test_dataset_gray': test_dataset_gray,
+        'train_subsets_gray': train_subsets_gray,
+        'validation_subsets_gray': validation_subsets_gray,
+        'test_subsets_gray': test_subsets_gray,
+        'weights': weights,
+        'dirichlet_allocation': dirichlet_allocation
+    }
+    return return_val, 10
+
+def initialize_dataset(pacs_train_path="", pacs_val_path="", pacs_test_path="", pacs_partition_path=""):
+    '''
     if 'CIFAR' in args.data_path:
+        print("KT loading CIFAR data")
         return_val, num_classes = load_CIFAR_data()
+    el
+    '''
+    if 'pacs' in args.data_path.lower():
+        print("KT loading PACS data")
+        return_val, num_classes = load_PACS_data(pacs_train_path, pacs_val_path, pacs_test_path, pacs_partition_path)
     else:
         raise NotImplementedError
 
@@ -202,18 +289,30 @@ if __name__=="__main__":
     parser.add_argument('--net', default='lenet', choices=['synth', 'twolayer-lenet-hetero', 'twolayer','lenet'])
     parser.add_argument('--use_sigmoid', default='relu', choices=['relu','sigmoid'])
 
-    parser.add_argument('--data_path', default='~/data/CIFAR10')
+    #DATA RELATED
+    parser.add_argument('--data_type', default='PACS')
+    parser.add_argument('--data_path', default='data/domain-partitioned-pacs')
     parser.add_argument('--logdir', default='./logs')
     parser.add_argument('--group_name', default='group')
     parser.add_argument('--project', default='project-ktboi')
 
+    # PACS DATA
+    # worker
+    parser.add_argument('--pacs_worker_train_file', default='data/domain-partitioned-pacs/pacs-iid-serverdomain-art_painting-worker-train-split.txt')
+    parser.add_argument('--pacs_worker_val_file', default='data/domain-partitioned-pacs/pacs-iid-serverdomain-art_painting-worker-val-split.txt')
+    parser.add_argument('--pacs_worker_test_file', default='data/domain-partitioned-pacs/pacs-iid-serverdomain-art_painting-worker-test-split.txt')
+    parser.add_argument('--pacs_worker_partition_file', default='data/domain-partitioned-pacs/pacs-iid-serverdomain-art_painting-worker-20-0.p.p')
+    # server
+    parser.add_argument('--pacs_server_train_file', default='data/domain-partitioned-pacs/pacs-iid-serverdomain-art_painting-server-train-split.txt')
+    parser.add_argument('--pacs_server_val_file', default='data/domain-partitioned-pacs/pacs-iid-serverdomain-art_painting-server-val-split.txt')
+    parser.add_argument('--pacs_server_test_file', default='data/domain-partitioned-pacs/pacs-iid-serverdomain-art_painting-server-test-split.txt')
 
     parser.add_argument('--embedding_dim', default=84, type=int)
     parser.add_argument('--data_seed', default=0, type=int)
     parser.add_argument('--seed', default=0, type=int)
     parser.add_argument('--num_workers', default=10, type=int)
-    parser.add_argument('--dirichlet', default=False, action='store_true')
-    parser.add_argument('--iid', default=True, action='store_true')
+    parser.add_argument('--dirichlet', default=True, action='store_true')
+    parser.add_argument('--iid', default=False, action='store_true')
     parser.add_argument('--alpha', default=0.1, type=float)
     parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
     parser.add_argument('--lr_scheduler', default='none', help='learning rate scheduler')
@@ -244,7 +343,7 @@ if __name__=="__main__":
     parser.add_argument('--hetero_arch', default=False, action='store_true')
     parser.add_argument('--active_ratio', default=1.0, type=float)
 
-    parser.add_argument('--transfer', default='none', choices=['none', 'fedcda','fedcda-marginal', 'fedavg'])
+    parser.add_argument('--transfer', default='none', choices=['none', 'fedcda','fedcda-marginal', 'fedavg', 'feddf'])
     parser.add_argument('--leftout_worker_id', default=1, type=int)
     parser.add_argument('--num_moments', default=1, type=int)
     parser.add_argument('--compute_divergence', default=False, action='store_true')
@@ -255,6 +354,7 @@ if __name__=="__main__":
     args = parser.parse_args()
 
     ########################################################
+
     np.random.seed(args.seed)
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -262,8 +362,8 @@ if __name__=="__main__":
     # randomly choose a worker to exclude in case of 'fedavg'
     # args.leftout_worker_id = np.random.choice(args.num_workers)
     fed_workers = list(range(args.num_workers))
-    fed_workers.remove(args.leftout_worker_id)
-    non_fed_worker = [args.leftout_worker_id]
+    # fed_workers.remove(args.leftout_worker_id)
+    # non_fed_worker = [args.leftout_worker_id]
 
     # LOGGING
     exp_name_ = experiment_name(args)
@@ -281,10 +381,17 @@ if __name__=="__main__":
         group=args.group_name
     )
 
+    time.sleep(5)
+
     # DATASETS
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    loaded_dataset, num_classes = initialize_dataset()
+    if (args.data_type == "PACS"):
+        # print("KT: ", args.pacs_worker_train_file, args.pacs_worker_val_file, args.pacs_worker_test_file, args.pacs_worker_partition_file)
+        loaded_dataset, num_classes = initialize_dataset(pacs_train_path=args.pacs_worker_train_file, 
+                                                         pacs_val_path=args.pacs_worker_val_file, 
+                                                         pacs_test_path=args.pacs_worker_test_file, 
+                                                         pacs_partition_path=args.pacs_worker_partition_file)
 
     if 'dirichlet_allocation' in loaded_dataset:
         args.__dict__['allocation'] = loaded_dataset['dirichlet_allocation']
@@ -315,7 +422,7 @@ if __name__=="__main__":
                 temp_test_set = loaded_dataset['test_subsets'][worker_ind]
                 # temp_test_subset_full=loaded_dataset['test_dataset']
             else:
-                import pdb; pdb.set_trace()
+                # import pdb; pdb.set_trace()
                 raise NotImplementedError
                 # temp_test_set = loaded_dataset['test_subset']
 
@@ -356,6 +463,7 @@ if __name__=="__main__":
 
     consensus_model = LeNetBounded(); consensus_model = consensus_model.to(device);
     temp_consensus_model = LeNetBounded(); temp_consensus_model = temp_consensus_model.to(device);
+    server_model = LeNetBounded(); server_model = server_model.to(device);
 
     with open(os.path.join(args.logdir, f'combined_results.csv'), 'a+') as f_:
         csv_writer = csv.writer(f_,delimiter=',')
@@ -647,6 +755,99 @@ if __name__=="__main__":
                     worker = workers[wid]
                     for p1, p2 in zip(consensus_model.parameters(), worker.model.parameters()):
                         p2.data = p1.detach().clone().data
+
+        elif (args.transfer == 'feddf'):
+        # tempConsensusModel captures average of the worker model parameters
+        # serverModel starts from tempConsensusModel and changes it by back proping on noisy data.
+        # this changed serverModel is sent over to the worker.
+            FedDFEpochs = 10;
+            with torch.no_grad():
+                for p1, p2, p3 in zip(temp_consensus_model.parameters(), workers[0].model.parameters(), server_model.parameters()):
+                    p1.data = p2.detach().clone().data/args.num_workers
+                    p3.data = p2.detach().clone().data/args.num_workers
+
+                for wid in range(1, args.num_workers):
+                    worker = workers[wid]
+                    for p1, p2, p3 in zip(temp_consensus_model.parameters(), worker.model.parameters(),  server_model.parameters()):
+                        p1.data = p1.data + p2.detach().clone().data/args.num_workers
+                        p3.data = p1.data + p2.detach().clone().data/args.num_workers
+
+            # get noisy data
+            from data_utils import get_datasets, get_datasets_pacs, get_transforms
+
+            '''
+            if (args.data_type == "PACS"):
+                noisey_transform_train, noisey_transform_test = get_transforms(grayscale=False)
+                noisey_train_dataset, noisey_validation_dataset, noisey_test_dataset = get_datasets_pacs(noisey_transform_train, noisey_transform_test, 
+                                                                                                         args.pacs_server_train_file, args.pacs_server_val_file, args.pacs_server_test_file) 
+            else:
+                noisey_transform_train, noisey_transform_test = get_transforms(grayscale=False, noise_mean=1, noise_std=1)
+                noisey_train_dataset, noisey_validation_dataset, noisey_test_dataset = get_datasets(noisey_transform_train, noisey_transform_test, args.data_path)
+            '''
+            noisey_transform_train, noisey_transform_test = get_transforms(grayscale=False)
+            noisey_train_dataset, noisey_validation_dataset, noisey_test_dataset = get_datasets_pacs(noisey_transform_train, noisey_transform_test, 
+                                                                                                         args.pacs_server_train_file, args.pacs_server_val_file, args.pacs_server_test_file) 
+            
+            # Create data loaders for our datasets; shuffle for training, not for validation
+            noisey_training_loader = torch.utils.data.DataLoader(noisey_train_dataset, batch_size=16, shuffle=True)
+            noisey_validation_loader = torch.utils.data.DataLoader(noisey_validation_dataset, batch_size=16, shuffle=False)
+
+            server_loss_fn = torch.nn.MSELoss()
+            server_optimizer = torch.optim.SGD(server_model.parameters(), lr = 0.01, momentum = 0.9)
+            # TODO:
+            # get noisy data.
+            # train server_model
+            # send server_model to workers
+            for server_epoch in tqdm(range(FedDFEpochs)):
+                temp_consensus_model.eval()
+                server_model.train()
+                feddf_running_loss = 0.0
+                feddf_last_loss = 0.0
+                
+                for server_idx, noisey_data in enumerate(noisey_training_loader):
+
+                    server_optimizer.zero_grad()
+
+                    noisey_inputs, _ = noisey_data
+                    noisey_inputs = noisey_inputs.to('cuda')
+
+                    consensus_model_logits = temp_consensus_model(noisey_inputs)
+                    server_model_logits = server_model(noisey_inputs)
+
+                    # import pdb; pdb.set_trace()
+
+                    loss_val = server_loss_fn(server_model_logits[1], consensus_model_logits[1])
+                    loss_val.backward()
+
+                    server_optimizer.step()
+
+                    feddf_running_loss += loss_val.item()
+
+                    if server_idx % 10 == 9:
+                        feddf_last_loss = feddf_running_loss / 10
+                        row_wandb['feddf_batch{}_epoch{}_loss'.format(server_idx, server_epoch, feddf_last_loss)] = feddf_last_loss
+                        feddf_running_loss = 0.0
+            
+            # update each worker's parameters
+            with torch.no_grad():
+                for p1, p2 in zip(server_model.parameters(), workers[0].model.parameters()):
+                    p2.data = p1.detach().clone().data
+
+                for wid in range(1, args.num_workers):
+                    worker = workers[wid]
+                    for p1, p2 in zip(server_model.parameters(), worker.model.parameters()):
+                        p2.data = p1.detach().clone().data
+        
+        # TODO
+        # elif (args.transfer == 'fedDf'):
+        # loop over each student's model.
+        # compute the average of each model architecture
+        # for each model architecture
+        #   for each epoch
+        #     for each batch ---> add noise specified by alpha to each image in the batch
+        #       backward prop/train
+        #   update model architecture to send to student.
+        # NOTE: student data does not contain noise.
         
         ###################################################
         # Compute divergence

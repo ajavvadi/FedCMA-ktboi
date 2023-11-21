@@ -8,7 +8,8 @@ class LeNet(nn.Module):
         super(LeNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1   = nn.Linear(16*5*5, 120)
+        # self.fc1   = nn.Linear(16*5*5, 120)
+        self.fc1   = nn.Linear(44944, 120)
         self.fc2   = nn.Linear(120, embedding_dim)
         self.classifier   = nn.Linear(embedding_dim, 10)
 
@@ -36,6 +37,7 @@ class LeNetBounded(LeNet):
         out = F.relu(self.conv2(out))
         out = F.max_pool2d(out, 2)
         out = out.view(out.size(0), -1)
+        #import pdb; pdb.set_trace()
         out = F.relu(self.fc1(out))
         embeddings = torch.sigmoid(self.fc2(out))
         out = self.classifier(embeddings)

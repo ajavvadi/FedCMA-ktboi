@@ -159,12 +159,7 @@ class WorkerLtd:
             self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, sampler=self.train_sampler, drop_last=False)            
             self.validation_loader = DataLoader(validation_subset, batch_size=512, sampler=self.validation_sampler, drop_last=False)            
             self.test_loader = DataLoader(test_subset, batch_size=512, sampler=self.test_sampler, drop_last=False)
-            # self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, shuffle=True)
-            # self.validation_loader = DataLoader(validation_subset, batch_size=512, shuffle=True)
-            # self.test_loader = DataLoader(self.test_subset, batch_size=512, shuffle=False)
         else:
-            # self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, shuffle=True, num_workers=8, pin_memory=True)
-            # self.validation_loader = DataLoader(validation_subset, batch_size=512, shuffle=True, num_workers=8, pin_memory=True)
             if test_subset_full is not None:
                 self.test_subset_full = test_subset_full
                 self.test_loader_full = DataLoader(self.test_subset_full, batch_size=512, shuffle=False,num_workers=8, pin_memory=True)
@@ -172,11 +167,7 @@ class WorkerLtd:
             self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, sampler=self.train_sampler, drop_last=False)            
             self.validation_loader = DataLoader(validation_subset, batch_size=512, sampler=self.validation_sampler, drop_last=False)            
             self.test_loader = DataLoader(test_subset, batch_size=512, sampler=self.test_sampler, drop_last=False)
-
-            # self.train_loader = DataLoader(train_subset, batch_size=self.train_batch_size, shuffle=True, pin_memory=True)
-            # self.validation_loader = DataLoader(validation_subset, batch_size=512, shuffle=True, pin_memory=True)
-            # self.test_loader = DataLoader(self.test_subset, batch_size=512, shuffle=False,num_workers=8, pin_memory=True)
-
+            
         self.discr_subset = discr_subset
         if discr_subset is None:
             self.discr_loader = None
@@ -253,6 +244,9 @@ class WorkerLtd:
         
         batch_idx = -1
         for inputs, targets in self.train_loader:
+
+            # import pdb; pdb.set_trace()
+
             batch_idx += 1
 
             t0=time.time()
@@ -262,6 +256,7 @@ class WorkerLtd:
             self.iter += 1
             inputs, targets = inputs.to(self.device), targets.to(self.device)
             self.optimizer.zero_grad()
+            # import pdb; pdb.set_trace()
             embeddings, outputs = self.model(inputs)
             loss = self.loss_fn(outputs, targets)
 
